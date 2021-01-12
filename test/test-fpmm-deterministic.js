@@ -7,7 +7,7 @@ const WETH9 = artifacts.require('WETH9')
 const FPMMDeterministicFactory = artifacts.require('FPMMDeterministicFactory')
 const FixedProductMarketMaker = artifacts.require('FixedProductMarketMaker')
 
-contract('FPMMDeterministicFactory', function([, creator, oracle, trader, investor2, testInvestor]) {
+contract('FPMMDeterministicFactory', function([, creator, oracle, trader, investor2, testInvestor, governance]) {
     const questionId = randomHex(32)
     const numOutcomes = 10
     const conditionId = getConditionId(oracle, questionId, numOutcomes)
@@ -21,7 +21,8 @@ contract('FPMMDeterministicFactory', function([, creator, oracle, trader, invest
     let fpmmDeterministicFactory
     let positionIds
     before(async function() {
-        conditionalTokens = await ConditionalTokens.deployed();
+      conditionalTokens = await ConditionalTokens.deployed(governance);
+      console.log('conditionalTokens : ', conditionalTokens);
         collateralToken = await WETH9.deployed();
         fpmmDeterministicFactory = await FPMMDeterministicFactory.deployed()
         positionIds = collectionIds.map(collectionId => getPositionId(collateralToken.address, collectionId))
@@ -45,8 +46,8 @@ contract('FPMMDeterministicFactory', function([, creator, oracle, trader, invest
     step('can be created and funded by factory', async function() {
         await collateralToken.deposit({ value: initialFunds, from: creator });
         await collateralToken.approve(fpmmDeterministicFactory.address, initialFunds, { from: creator });
-
-        await conditionalTokens.prepareCondition(oracle, questionId, numOutcomes);
+      console.log('conditionalTokens : ', await conditionalTokens.governance());
+      await conditionalTokens.prepareCondition(oracle, questionId, numOutcomes), { from: creator};
         const createArgs = [
             saltNonce,
             conditionalTokens.address,
@@ -57,6 +58,8 @@ contract('FPMMDeterministicFactory', function([, creator, oracle, trader, invest
             initialDistribution,
             { from: creator }
         ]
+
+        console.log('governance address: ', governance);
 
         const fixedProductMarketMakerAddress = await fpmmDeterministicFactory.create2FixedProductMarketMaker.call(...createArgs);
 
